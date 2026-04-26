@@ -1,0 +1,17 @@
+certifi==2026.2.25
+charset-normalizer==3.4.4
+click==8.3.1
+cpppo==5.2.5
+crypto_licensing==6.0.1
+dnspython==2.8.0
+greenery==2.1
+idna==3.11
+pybullet==3.2.7
+pycomm3==1.2.16
+pycryptodome==3.23.0
+pytz-deprecation-shim==0.1.0.post0
+requests==2.32.5
+requests-toolbelt==1.0.0
+tzdata==2025.3
+tzlocal==5.3.1
+urllib3==2.6.3

@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  plc:
+    build:
+      context: .
+      dockerfile: Dockerfile.plc
+    container_name: enip_sim_plc
+    networks:
+      pub_net:
+        ipv4_address: 10.7.1.37
+  mes:
+    build:
+      context: .
+      dockerfile: Dockerfile.mes
+    container_name: enip_sim_mes
+    # plcが起動してからmesを起動する依存関係を指定
+    depends_on:
+      - plc
+    environment:
+      - PLC_IP=10.7.1.37
+    networks:
+      pub_net:
+        ipv4_address: 10.7.1.38
+
+networks:
+  pub_net:
+    driver: macvlan
+    driver_opts:
+      parent: enp0s3
+    ipam:
+      config:
+        - subnet: 10.7.1.0/24

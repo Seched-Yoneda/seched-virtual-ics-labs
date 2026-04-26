@@ -1,0 +1,5 @@
+FROM python:3.12-slim
+WORKDIR /app
+RUN pip install --no-cache-dir cpppo==5.2.5
+EXPOSE 44818
+CMD ["python", "-m", "cpppo.server.enip", "-v", "-a", "0.0.0.0", "Robot_Cmd=INT", "Robot_Status=INT", "Target_X=REAL", "Target_Y=REAL"]

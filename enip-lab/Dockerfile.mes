@@ -1,0 +1,5 @@
+FROM python:3.12-slim
+WORKDIR /app
+RUN pip install --no-cache-dir cpppo==5.2.5
+COPY mes_client.py ./
+CMD ["python", "mes_client.py"]

@@ -1,0 +1,36 @@
+services:
+  # 1. PLC for BPCS (Modbus Server 1)
+  modbus-bpcs:
+    build: ./plc
+    container_name: modbus-bpcs
+    networks:
+      scada-net:
+        ipv4_address: 10.7.2.37
+
+  # 3. OCS/SCADA (Modbus Client)
+  scada-client:
+    build: ./scada
+    container_name: scada-client
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./scada:/app
+    environment:
+      - PLC_IP=10.7.2.37
+    depends_on:
+      - modbus-bpcs
+    networks:
+      scada-net:
+        ipv4_address: 10.7.2.39
+
+networks:
+  scada-net:
+    driver: macvlan
+    driver_opts:
+      # Ubuntuのメイン・ネットワークインターフェース（ifconfigで確認）を指定します
+      parent: enp0s3
+    ipam:
+      config:
+        - subnet: 10.7.2.0/24
+          # コンテナ用IPプールを予備領域(240〜255)に逃すことで他の静的IPとの干渉を回避
+          ip_range: 10.7.2.240/28

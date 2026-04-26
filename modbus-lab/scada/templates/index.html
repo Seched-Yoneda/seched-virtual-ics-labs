@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BPCS SCADA HMI</title>
+    <!-- Use some basic CSS for dark theme -->
+    <style>
+        html, body { height: 100vh; background-color: #121212; margin: 0; padding: 0; overflow: hidden; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; color: #e0e0e0; display: flex; flex-direction: column; padding: 10px 20px; box-sizing: border-box; }
+        h1 { margin-top: 5px; margin-bottom: 10px; font-size: 1.4em; flex-shrink: 0; }
+        h2 { margin-top: 0; font-size: 1.1em; border-bottom: 1px solid #444; padding-bottom: 5px; }
+        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; flex-grow: 1; min-height: 0; }
+        .left-column { display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+        .right-column { display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+        .panel { background-color: #1e1e1e; border: 1px solid #333; border-radius: 6px; padding: 12px; display: flex; flex-direction: column; }
+        .left-column > .panel:last-child { flex-grow: 1; justify-content: flex-start; }
+        .right-column > .panel { flex-grow: 1; justify-content: flex-start; }
+        .data-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #2a2a2a; }
+        .data-row:last-child { border-bottom: none; }
+        .value { font-size: 1.1em; font-weight: bold; color: #4CAF50; }
+        .alarm, .state { padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.85em; display: inline-block; min-width: 40px; text-align: center; }
+        .alarm.active { background-color: #f44336; color: white; }
+        .alarm.inactive { background-color: #333; color: gray; }
+        .state.active { background-color: #4CAF50; color: white; }
+        .state.inactive { background-color: #333; color: gray; }
+        .control-btn { background-color: #2196F3; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.9em; }
+        input[type="number"] { padding: 4px; background-color: #333; color: white; border: 1px solid #555; border-radius: 4px; width: 60px; font-size: 0.9em;}
+    </style>
+</head>
+<body>
+    <h1>BPCS SCADA Console</h1>
+    
+    <div id="error-banner" style="display: none; background-color: #f44336; color: white; padding: 10px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #d32f2f;"></div>
+    <div class="dashboard">
+        <div class="left-column">
+            <!-- Process Variables -->
+            <div class="panel">
+                <h2>Process Variables (入力レジスタ: IR)</h2>
+                <div class="data-row">
+                    <span>LNG受入流量 (IR 0)</span>
+                    <span class="value" id="ir_0">--</span>
+                </div>
+                <div class="data-row">
+                    <span>LNGタンク 液位 (IR 1)</span>
+                    <span class="value" id="ir_1">--</span>
+                </div>
+                <div class="data-row">
+                    <span>LNGタンク 圧力 (IR 2)</span>
+                    <span class="value" id="ir_2">--</span>
+                </div>
+                <div class="data-row">
+                    <span>ポンプ送出流量 (IR 3)</span>
+                    <span class="value" id="ir_3">--</span>
+                </div>
+                <div class="data-row">
+                    <span>PID制御偏差 (IR 4)</span>
+                    <span class="value" id="ir_4">--</span>
+                </div>
+            </div>
+
+            <!-- Control Parameters -->
+            <div class="panel">
+                <h2>Control Output & Setpoints (保持レジスタ: HR)</h2>
+                <div class="data-row">
+                    <div>
+                        <span>流量制御弁 (FCV) 開度 (HR 0)</span>
+                        <div style="font-size: 0.8em; color: gray;">現在値: <span id="hr_0_val">--</span> %</div>
+                    </div>
+                    <div>
+                        <input type="number" id="input_hr_0" min="0" max="100">
+                        <button class="control-btn" onclick="writeRegister(0, 'input_hr_0')">設定</button>
+                    </div>
+                </div>
+                <div class="data-row">
+                    <div>
+                        <span>LNG受入流量 設定値 (HR 1)</span>
+                        <div style="font-size: 0.8em; color: gray;">現在値: <span id="hr_1_val">--</span></div>
+                    </div>
+                    <div>
+                        <input type="number" id="input_hr_1" min="0" max="10000">
+                        <button class="control-btn" onclick="writeRegister(1, 'input_hr_1')">設定</button>
+                    </div>
+                </div>
+                <div class="data-row">
+                    <div>
+                        <span>VFD 周波数/回転数 (HR 2)</span>
+                        <div style="font-size: 0.8em; color: gray;">現在値: <span id="hr_2_val">--</span></div>
+                    </div>
+                    <div>
+                        <input type="number" id="input_hr_2" min="0" max="1000">
+                        <button class="control-btn" onclick="writeRegister(2, 'input_hr_2')">設定</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-column">
+            <!-- Alarms and States -->
+            <div class="panel">
+                <h2>Alarms & States (ディスクリート入力: DI)</h2>
+                <div class="data-row">
+                    <span>受入配管 高流量警報 (HA)</span>
+                    <span class="alarm" id="di_0">HA</span>
+                </div>
+                <div class="data-row">
+                    <span>受入配管 低流量警報 (LA)</span>
+                    <span class="alarm" id="di_1">LA</span>
+                </div>
+                <div class="data-row">
+                    <span>タンク 高々液位警報 (HH)</span>
+                    <span class="alarm" id="di_2">HH</span>
+                </div>
+                <div class="data-row">
+                    <span>タンク 高液位警報 (HA)</span>
+                    <span class="alarm" id="di_3">HA</span>
+                </div>
+                <div class="data-row">
+                    <span>タンク 低々液位警報 (LLA)</span>
+                    <span class="alarm" id="di_4">LLA</span>
+                </div>
+                <div class="data-row">
+                    <span>タンク 高圧警報 (HA)</span>
+                    <span class="alarm" id="di_5">HA</span>
+                </div>
+                <div class="data-row">
+                    <span>タンク 低圧警報 (LA)</span>
+                    <span class="alarm" id="di_6">LA</span>
+                </div>
+                <div class="data-row">
+                    <span>BOGコンプレッサー 運転状態</span>
+                    <span class="state" id="di_7">ON</span>
+                </div>
+                <div class="data-row">
+                    <span>インタンクポンプ 運転状態</span>
+                    <span class="state" id="di_8">ON</span>
+                </div>
+                <div class="data-row">
+                    <span>VFD 故障警報</span>
+                    <span class="alarm" id="di_9">FAULT</span>
+                </div>
+                <div class="data-row">
+                    <span>PLC自己診断状態</span>
+                    <span class="state" id="di_10">OK</span>
+                </div>
+                <div class="data-row">
+                    <span>フィールド機器通信状態</span>
+                    <span class="state" id="di_11">OK</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateData() {
+            fetch('/api/data')
+                .then(response => response.json())
+                .then(data => {
+                    const errorBanner = document.getElementById('error-banner');
+                    if (data.error) {
+                        console.error(data.error);
+                        errorBanner.innerText = '通信エラー: ' + data.error;
+                        errorBanner.style.display = 'block';
+                        return;
+                    } else {
+                        errorBanner.style.display = 'none';
+                    }
+
+                    // Update PVs
+                    document.getElementById('ir_0').innerText = data.pv.ir_0;
+                    document.getElementById('ir_1').innerText = data.pv.ir_1;
+                    document.getElementById('ir_2').innerText = data.pv.ir_2;
+                    document.getElementById('ir_3').innerText = data.pv.ir_3;
+                    document.getElementById('ir_4').innerText = data.pv.ir_4;
+
+                    // Update HRs
+                    document.getElementById('hr_0_val').innerText = data.sp_op.hr_0;
+                    document.getElementById('hr_1_val').innerText = data.sp_op.hr_1;
+                    document.getElementById('hr_2_val').innerText = data.sp_op.hr_2;
+
+                    // Update Alarms/States
+                    const alarms = ['di_0', 'di_1', 'di_2', 'di_3', 'di_4', 'di_5', 'di_6', 'di_9']; // True means active alarm
+                    alarms.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (data.alarms_states[id]) {
+                            el.className = 'alarm active';
+                        } else {
+                            el.className = 'alarm inactive';
+                        }
+                    });
+
+                    // Update normal states (True = OK/ON)
+                    const states = [
+                        {id: 'di_7', trueText: '稼働中', falseText: '停止'},
+                        {id: 'di_8', trueText: '稼働中', falseText: '停止'},
+                        {id: 'di_10', trueText: '正常', falseText: '異常'},
+                        {id: 'di_11', trueText: '正常', falseText: '異常'}
+                    ];
+                    states.forEach(state => {
+                        const el = document.getElementById(state.id);
+                        if (data.alarms_states[state.id]) {
+                            el.className = 'state active';
+                            el.innerText = state.trueText;
+                        } else {
+                            el.className = 'state inactive';
+                            el.innerText = state.falseText;
+                        }
+                    });
+
+                })
+                .catch(err => console.error('Fetch error:', err));
+        }
+
+        function writeRegister(address, inputId) {
+            const val = document.getElementById(inputId).value;
+            if (val === '') return;
+            
+            fetch('/api/write', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ address: address, value: parseInt(val) })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    // 成功したら入力欄をクリア
+                    document.getElementById(inputId).value = '';
+                    updateData(); // 即座に反映
+                } else {
+                    alert('Error writing to register: ' + (data.error || 'Unknown Error'));
+                }
+            })
+            .catch(err => alert('Network error: ' + err));
+        }
+
+        // Poll every 1 second
+        setInterval(updateData, 1000);
+        updateData();
+    </script>
+</body>
+</html>
