@@ -1,2 +1,4 @@
+# IDE and AI Agent files
 .agents/
-seched-yoneda-labs.code-workspace
+**/.agents/
+*.code-workspace
