@@ -171,6 +171,7 @@ Grant necessary security permissions so that port-forwarded network traffic is n
    # Administrator PowerShell
    Get-NetAdapter | Where-Object { $_.InterfaceDescription -like '*VirtualBox Host-Only*' } | Get-NetIPInterface | Set-NetIPInterface -Forwarding Enabled
    ```
+   Due to Windows specifications, the **IP forwarding (routing)** setting enabled above resets to Disabled when the PC is restarted, so it must be executed again.
 
 ---
 
@@ -208,7 +209,7 @@ Test the SSH connection to Kali Linux from the Windows command prompt (cmd) befo
 
    > [!NOTE] 
    > **[Troubleshooting 1]**
-   > During verification, if you encounter the warning `WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!`, please refer to "[8. Troubleshooting: 2. SSH connection Key Conflict Error](#2-ssh-connection-key-conflict-error)" at the end of this document, and retry the command after applying the fix.
+   > During verification, if you encounter the warning `WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!`, please refer to "[8. Troubleshooting: 3. SSH Connection Key Conflict Error](#3-ssh-connection-key-conflict-error)" at the end of this document, and retry the command after applying the fix.
 
 3. **Verify Login**
    Upon initial login, when prompted with `Are you sure you want to continue connecting (yes/no/[fingerprint])?`, type `yes`. Input the password (default is `kali`) and verify that login succeeds. Once confirmed, logout with `exit`.
@@ -256,10 +257,10 @@ Open VS Code Settings via `File -> Preferences -> Settings`, search for "proxy" 
 
 - **HTTP Proxy** -> `http://192.168.56.1:8888`
 - **Strict SSL Proxy** -> `OFF`
-- **Server Certificates** -> `OFF`
+- **System Certificates** -> `OFF`
 
 > **※ Note**
-> For detailed reasons concerning setting "Strict SSL Proxy" and "Server Certificates" to `OFF`, refer to "[9. Supplements: 2. Why Disable Strict SSL Proxy/Server Certificates in Antigravity](#2-why-disable-strict-ssl-proxyserver-certificates-in-antigravity)" at the end.
+> For detailed reasons concerning setting "Strict SSL Proxy" and "System Certificates" to `OFF`, refer to "[9. Supplements: 2. Why Disable Strict SSL Proxy/System Certificates in Antigravity](#2-why-disable-strict-ssl-proxysystem-certificates-in-antigravity)" at the end.
 
 ### 3. Commit Settings and Reboot to Fully Isolated Environment
 Changes made in VS Code remote settings may occasionally not reflect immediately across background processes.
@@ -324,7 +325,24 @@ Restart-Service iphlpsvc
 026-03-24 10:20:26.617 [info] W0324 10:20:26.616773 13910 log_context.go:118] Failed to refresh cache in background: failed to get load code assist response: Post "https://daily-cloudcode-pa.googleapis.com/v1internal:loadCodeAssist": dial tcp 192.168.56.1:443: connect: connection refused
 ```
 
-### 2. SSH connection Key Conflict Error
+### 2. VS Code Server Download Errors Occurring During Kali Linux Remote SSH Connections
+
+Updated instances occurring towards Windows-Hosted VS Code client dependencies demand appropriately matched iterations of "VS Code Server" fetched and aligned internally to the VM (Kali Linux).
+Unfortunately, Initial download phase mechanisms inherent to VS Code systematically lack automatic proxy implementation compatibility resulting in terminal logging traces reading `Error downloading server from all URLs` or `installation failed`, generating hard stops mitigating further connections.
+
+Counteract failing instances executing temporary protocols involving booting via authorized internal NAT connections allowing targeted file extraction without firewall/proxy manipulation errors:
+
+1. **Perform System Shutdown for Kali Linux**
+   Shutdown currently active instances targeting Kali Linux utilizing VirtualBox UI manipulation or Terminal (`sudo shutdown -h now`).
+2. **Temporarily Authorize Internal NAT Integrations**
+   Within VirtualBox managing settings targeting Kali Linux VMs, open "Network" configurations and dynamically construct **"Adapter 3" selecting implementations tagged "NAT" and verify enablement** (generate blank setups if unassigned previously).
+3. **Execute Boot Iterations and Recouple Remote Connecting Paths**
+   Boot up Kali Linux dynamically post adapter allocations. Direct VS Code to deploy remote windows targeting established connections via `KaliLinux`. Input correct passwords allowing background executions allocating functional instances governing proper fetches mapping VS Code Server extensions transparently relying on active NAT provisions.
+4. **Appraise Connectivity and Workspace Responses**
+   Verify lower-left user overlays printing successfully initialized properties tracing `SSH:KaliLinux`. Ensure explorer arrays unearth internal tree arrays asserting successful operations spanning isolated systems.
+5. **Neutralize Associated NAT Protocols (Return to Default Environmental Isolation)**
+   Post resolution sequences, shut down operations traversing standard structures to **uncheck enablement associated with "Adapter 3 (NAT)"** protocols returning environment conditions masking behind configured closed-loop Local Proxy iterations securely.
+### 3. SSH Connection Key Conflict Error
 
 This failure frequently originates as a troubleshooting scenario amidst **"6. Pre-Check for Running Antigravity Remote Window"** procedure 2: **"Connection Test from the Command Prompt"**.
 
@@ -344,7 +362,7 @@ Locate messages such as `Offending ECDSA key in C:\Users\seched/known_hosts:26` 
 2. Fully delete the offending sequence targeting entities referencing `192.168.56.7` or `KaliLinux`. Save modifications.
 3. Validate connection restorations executing `ssh -v KaliLinux` again via command prompt.
 
-### 3. Procedure to Recover Settings After Temporarily Disabling or Reverting Windows Firewall
+### 4. Procedure to Recover Settings After Temporarily Disabling or Reverting Windows Firewall
 
 Should you disable Windows Firewall for troubleshooting applications and later click "Restore Default Values", you risk entirely clearing the manual application rules embedded within "4. Windows Firewall and Routing Configuration". Consequently, subsequent connection routing traversing Custom Proxy (Port 8888) or Google SSL Traffic (Port 443) incurs hard blocks resulting in critical remote window failures. (General Port Proxy operations alongside IP forwarding typically endure unharmed).
 
@@ -378,23 +396,6 @@ netsh advfirewall firewall add rule name="WSL Proxy Port 8888" dir=in action=all
 netsh advfirewall firewall add rule name="WSL Proxy Port 443" dir=in action=allow protocol=TCP localport=443
 ```
 
-### 4. VS Code Server Download Errors Occurring During Kali Linux Remote SSH Connections
-
-Updated instances occurring towards Windows-Hosted VS Code client dependencies demand appropriately matched iterations of "VS Code Server" fetched and aligned internally to the VM (Kali Linux).
-Unfortunately, Initial download phase mechanisms inherent to VS Code systematically lack automatic proxy implementation compatibility resulting in terminal logging traces reading `Error downloading server from all URLs` or `installation failed`, generating hard stops mitigating further connections.
-
-Counteract failing instances executing temporary protocols involving booting via authorized internal NAT connections allowing targeted file extraction without firewall/proxy manipulation errors:
-
-1. **Perform System Shutdown for Kali Linux**
-   Shutdown currently active instances targeting Kali Linux utilizing VirtualBox UI manipulation or Terminal (`sudo shutdown -h now`).
-2. **Temporarily Authorize Internal NAT Integrations**
-   Within VirtualBox managing settings targeting Kali Linux VMs, open "Network" configurations and dynamically construct **"Adapter 3" selecting implementations tagged "NAT" and verify enablement** (generate blank setups if unassigned previously).
-3. **Execute Boot Iterations and Recouple Remote Connecting Paths**
-   Boot up Kali Linux dynamically post adapter allocations. Direct VS Code to deploy remote windows targeting established connections via `KaliLinux`. Input correct passwords allowing background executions allocating functional instances governing proper fetches mapping VS Code Server extensions transparently relying on active NAT provisions.
-4. **Appraise Connectivity and Workspace Responses**
-   Verify lower-left user overlays printing successfully initialized properties tracing `SSH:KaliLinux`. Ensure explorer arrays unearth internal tree arrays asserting successful operations spanning isolated systems.
-5. **Neutralize Associated NAT Protocols (Return to Default Environmental Isolation)**
-   Post resolution sequences, shut down operations traversing standard structures to **uncheck enablement associated with "Adapter 3 (NAT)"** protocols returning environment conditions masking behind configured closed-loop Local Proxy iterations securely.
 
 ---
 
@@ -429,8 +430,8 @@ Assuming dynamic internal network naming swaps translating from `intnet13` conve
 *(Supplement)*
 When adapting only properties nested spanning structural "Internal Network (Adapter 1)", secondary host operations leveraging instances associated with "Host-Only Ethernet assignments (Adapter 2 containing `192.168.56.x` properties)" generate zero impact preventing necessity modifications required targeting Windows-sided port forwarding loops paired alongside specific integrated standard HTTP Proxy specifications assigned covering VS Code operations allowing persistent stable behavior undisturbed.
 
-### 2. Why Disable Strict SSL Proxy/Server Certificates in Antigravity
+### 2. Why Disable Strict SSL Proxy/System Certificates in Antigravity
 
 Attempting external HTTPS communications via Proxy structures (particularly mapped leveraging integrated WSL TinyProxy objects) triggers generalized verification issues. Specifically, instances associated with standard validation phases (TLS Handshaking logic) evaluating internal Proxy Certification tracking combined with target node resolutions spanning domains governing Remote API connections (i.e. Google infrastructure systems), resulting in robust errors cascading communication blocks spanning associated integrated nodes yielding halted "Generating..." system responses generating failures blocking progress.
 
-By design, our layout encompasses structured validation operating amidst intrinsically verifiable closed-loop proxy domains generating requirements forcing targeted configurations. Applying states forcing manipulations where **"Strict SSL Proxy" sits assigned evaluating properties disabled enforcing nullification bypassing native internal routing verification** while simultaneously enforcing mapped properties disabling **"Server Certificates" implementing conditions allowing integrated bypassing operations preventing target connection structural certification errors** securely allows two-tier robust communication arrays blocking intrinsic failures securely preventing functional disruption scenarios completely.
+By design, our layout encompasses structured validation operating amidst intrinsically verifiable closed-loop proxy domains generating requirements forcing targeted configurations. Applying states forcing manipulations where **"Strict SSL Proxy" sits assigned evaluating properties disabled enforcing nullification bypassing native internal routing verification** while simultaneously enforcing mapped properties disabling **"System Certificates" implementing conditions allowing integrated bypassing operations preventing target connection structural certification errors** securely allows two-tier robust communication arrays blocking intrinsic failures securely preventing functional disruption scenarios completely.
