@@ -1,0 +1,60 @@
+version: '3.7'
+
+services:
+  opensearch:
+    image: opensearchproject/opensearch:1.3.14
+    container_name: opensearch
+    environment:
+      - cluster.name=opensearch-cluster
+      - node.name=opensearch-node1
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g
+      # クローズド環境での検証を容易にするため、強制HTTPS化などの複雑なセキュリティ機能をOFFにします
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+      - plugins.security.disabled=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    volumes:
+      # 外部HDD（/opt/opensearch_data）の中にopensearch専用の保存先を作ります
+      - /opt/opensearch_data:/usr/share/opensearch/data
+    networks:
+      - opensearch-net
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:1.3.14
+    container_name: opensearch-dashboards
+    ports:
+      - "5601:5601"
+    environment:
+      - OPENSEARCH_HOSTS=["http://opensearch:9200"]
+      - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
+    depends_on:
+      - opensearch
+    networks:
+      - opensearch-net
+
+  filebeat:
+    # OpenSearchに接続可能なOSS版（ライセンスチェックのないバージョン）のFilebeatを使用します
+    image: docker.elastic.co/beats/filebeat-oss:7.12.1
+    container_name: filebeat-opensearch
+    user: root
+    volumes:
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /opt/zeek:/opt/zeek:ro
+    depends_on:
+      - opensearch
+    networks:
+      - opensearch-net
+
+networks:
+  opensearch-net:
+    driver: bridge

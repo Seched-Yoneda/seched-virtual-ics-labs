@@ -1,0 +1,44 @@
+filebeat.inputs:
+- type: log
+  id: zeek-logs
+  enabled: true
+  paths:
+    - /opt/zeek/spool/zeek/*.log
+    - /opt/zeek/logs/*/*.log
+  # JSON形式のログをパースする設定
+  json.keys_under_root: true
+  json.add_error_key: true
+  json.overwrite_keys: true
+
+setup.template.enabled: false
+setup.ilm.enabled: false
+
+output.elasticsearch:
+  # 送信先をOpenSearchコンテナに指定（OSS版なのでopensearch outputモジュールで通信可能）
+  hosts: ["opensearch:9200"]
+  index: "filebeat-7.12.1-%{+yyyy.MM.dd}"
+  # ※今回は認証（plugins.security.disabled=true）をオフにしているため、username/passwordは不要です
+
+processors:
+  - rename:
+      fields:
+        - from: "service"
+          to: "network.protocol"
+        - from: "source"
+          to: "zeek.source"
+      ignore_missing: true
+      fail_on_error: false
+  - add_host_metadata: ~
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+  - add_kubernetes_metadata: ~
+  - drop_fields:
+      when:
+        has_fields: ['status_code']
+      fields: ["status_code"]
+      ignore_missing: true
+  - drop_fields:
+      when:
+        has_fields: ['zeek.source']
+      fields: ["zeek.source"]
+      ignore_missing: true
