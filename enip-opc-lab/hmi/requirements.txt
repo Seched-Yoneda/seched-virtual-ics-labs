@@ -1,0 +1,4 @@
+Flask==2.2.3
+Werkzeug==2.2.3
+asyncua==1.1.5
+cpppo==4.4.3

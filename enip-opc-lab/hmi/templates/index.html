@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FA System Web HMI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/index.css">
+</head>
+<body>
+    <div class="background-anim"></div>
+    <div class="glass-container">
+        <header>
+            <h1>FA Factory HMI <span>Simulation</span></h1>
+            <div class="header-controls">
+                <div class="toggle-container">
+                    <label class="switch">
+                        <input type="checkbox" id="intentional-error-toggle" onchange="toggleError(this)">
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="toggle-label">Intentional Error</span>
+                </div>
+                <div class="status-indicator">
+                    <span class="dot" id="global-dot"></span>
+                    <span id="global-status">Connecting...</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="dashboard">
+            <!-- MES Panel -->
+            <div class="panel mes-panel">
+                <h2>MES Dashboard</h2>
+                <div class="data-group">
+                    <label>Order ID</label>
+                    <div class="value" id="mes-order">---</div>
+                </div>
+                <div class="data-group">
+                    <label>Target Quantity</label>
+                    <div class="value" id="mes-target">0</div>
+                </div>
+                <div class="data-group">
+                    <label>MES Status</label>
+                    <div class="value highlight" id="mes-status">Disconnected</div>
+                </div>
+                <button class="btn btn-primary" onclick="sendCommand('order')">Request New Order</button>
+            </div>
+
+            <!-- PLC Panel -->
+            <div class="panel plc-panel">
+                <h2>PLC Controller</h2>
+                <div class="data-group">
+                    <label>Controller State</label>
+                    <div class="value highlight" id="plc-state">Disconnected</div>
+                </div>
+                <div class="data-group">
+                    <label>Production Count</label>
+                    <div class="progress-wrap">
+                        <div class="value" id="plc-count">0</div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="progress-fill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <button class="btn btn-success" onclick="sendCommand('start')">Start Production</button>
+                    <button class="btn btn-danger" onclick="sendCommand('reset')">Reset / Stop</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function sendCommand(cmd) {
+            fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: cmd })
+            });
+        }
+
+        function toggleError(cb) {
+            fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: 'toggle_error', state: cb.checked })
+            });
+        }
+
+        async function updateStatus() {
+            try {
+                const res = await fetch('/status');
+                const data = await res.json();
+                
+                document.getElementById('mes-order').innerText = data.mes_order;
+                document.getElementById('mes-target').innerText = data.mes_target;
+                document.getElementById('mes-status').innerText = data.mes_status;
+                
+                document.getElementById('plc-state').innerText = data.plc_state;
+                document.getElementById('plc-count').innerText = data.plc_count;
+                
+                const target = parseInt(data.mes_target) || 1;
+                const count = parseInt(data.plc_count) || 0;
+                let percent = (count / target) * 100;
+                if(percent > 100) percent = 100;
+                document.getElementById('progress-fill').style.width = percent + "%";
+                
+                // Status dot color
+                const dot = document.getElementById('global-dot');
+                if(data.plc_state === "Error") {
+                    dot.style.background = "#ff4757";
+                    document.getElementById('global-status').innerText = "System Fault";
+                } else if(data.plc_state === "Running") {
+                    dot.style.background = "#2ed573";
+                    document.getElementById('global-status').innerText = "Running";
+                } else {
+                    dot.style.background = "#ffa502";
+                    document.getElementById('global-status').innerText = "Standby";
+                }
+
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        setInterval(updateStatus, 1000);
+        updateStatus();
+    </script>
+</body>
+</html>

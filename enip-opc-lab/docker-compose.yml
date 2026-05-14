@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  mes:
+    build: ./mes
+    container_name: fa_sim_mes
+    mac_address: 02:42:0a:07:01:28
+    networks:
+      fa_network:
+        ipv4_address: 10.7.1.40
+
+  hmi:
+    build: ./hmi
+    container_name: fa_sim_hmi
+    mac_address: 02:42:0a:07:01:29
+    networks:
+      fa_network:
+        ipv4_address: 10.7.1.41
+    depends_on:
+      - mes
+      - plc
+
+  plc:
+    build: ./plc
+    container_name: fa_sim_plc
+    mac_address: 02:42:0a:07:01:2a
+    networks:
+      fa_network:
+        ipv4_address: 10.7.1.42
+    depends_on:
+      - mes
+      - robot
+
+  robot:
+    build: ./robot
+    container_name: fa_sim_robot
+    mac_address: 02:42:0a:07:01:2b
+    networks:
+      fa_network:
+        ipv4_address: 10.7.1.43
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    # devices:
+    #   - /dev/dri:/dev/dri
+
+networks:
+  fa_network:
+    driver: macvlan
+    driver_opts:
+      parent: enp0s3
+    ipam:
+      config:
+        - subnet: 10.7.1.0/24
